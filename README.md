@@ -24,6 +24,19 @@ and the run aborts if `mp_rank` reaches it. A natural-k module and a fixed-k
 module are not producing the same object; compare accordingly, and note the
 metrics still do not report the k found.
 
+## Measured on be1
+
+1715 cells x 2000 selected genes, `--random_seed 42`, defaults otherwise:
+Sinkhorn **converged** after 50 iterations, sigma 0.898, `mp_rank=25`, 213s
+(the rank-200 randomized SVD is most of it). All 1715 cells survived;
+**810 of the 2000 genes did not** — `--min_gene_cells 10` is doing real work
+here, so BiPCA sees a smaller gene set than the glmpca/newwave/scGBM arms on
+the same stage, which filter only all-zero rows.
+
+Worth contrasting with `pc-rmt-spca`, which biwhitens the same fixture and
+never converged on it at any damping. Different variance model (quadratic fit
+on counts vs. none) and different input (counts vs. log-normalized).
+
 ## Gotchas
 
 - BiPCA's Sinkhorn emits **NaN, not an exception**, on near-empty columns. The
