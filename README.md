@@ -24,13 +24,15 @@ and the run aborts if `mp_rank` reaches it. A natural-k module and a fixed-k
 module are not producing the same object; compare accordingly, and note the
 metrics still do not report the k found.
 
-## Measured on be1 (FEAT's 2000 genes)
+## Measured on be1
 
-Not rerun on RDIMR's full gene set yet. 1715 cells x 2000 selected genes, `--random_seed 42`, defaults otherwise:
-Sinkhorn **converged** after 50 iterations, sigma 0.898, `mp_rank=25`, 213s
-(the rank-200 randomized SVD is most of it). All 1715 cells survived;
-**810 of the 2000 genes did not** — `--min_gene_cells 10` is doing real work
-here; expect it to drop more on the full FILT gene set.
+RDIMR wiring (every FILT gene), omni, 4 threads, `--random_seed 42`, defaults:
+1715 cells x 18896 genes; `--min_gene_cells 10` dropped 2346, leaving 16550.
+Sinkhorn **converged** after 20 iterations, sigma 0.935, q 0.845,
+**`mp_rank=32`**. 2m04s wall, 1.8 GB peak RSS.
+
+On the old CNTFCT wiring (FEAT's 2000 genes) the same fixture gave
+`mp_rank=25` and lost 810 of the 2000 genes to `--min_gene_cells`.
 
 Worth contrasting with `pc-rmt-spca`, which biwhitens the same fixture and
 never converged on it at any damping. Different variance model (quadratic fit
