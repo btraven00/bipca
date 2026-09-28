@@ -4,12 +4,12 @@
 BiPCA fits a quadratic mean-variance relationship (Poisson/NB-like), Sinkhorn-
 biwhitens the matrix so the noise sits on the canonical Marchenko-Pastur scale,
 SVDs it, and truncates at the MP bulk edge. The variance model is defined on
-*raw counts*, so this lands on RDIMR -- the only stage that gets
-`rawdata_h5ad` -- and not on PCA, whose single input is already normalized.
+*raw counts*, so this lands on RDIMR (raw counts in, the method does its own
+normalization) and not on PCA, whose single input is already normalized.
 
-Cells come from --filtered_cellids, genes from the rownames of
---normalized_selected_h5: same subsetting the R cntfct module does, so BiPCA
-and glmpca/newwave/scGBM see the same submatrix of counts.
+Cells come from --filtered_cellids, genes from --filtered_featureids: all the
+genes FILT kept, no HVG selection. BiPCA needs the noise-dominated genes to
+place the MP edge, so feeding it a FEAT subset would undercut the method.
 
 Outputs
 -------
@@ -34,7 +34,6 @@ import sys
 from pathlib import Path
 
 import anndata as ad
-import h5py
 import numpy as np
 import scipy.sparse as sp
 
@@ -45,7 +44,7 @@ from common import cli  # noqa: E402
 def parse_args():
     p = argparse.ArgumentParser(description="BiPCA biwhitened PCA module")
     cli.add_base_args(p)             # --output_dir, --name
-    cli.add_stage_args(p, "RDIMR")   # --rawdata_h5ad, --filtered_cellids, --normalized_selected_h5
+    cli.add_stage_args(p, "RDIMR")   # --rawdata_h5ad, --filtered_cellids, --filtered_featureids
     p.add_argument("--variance_estimator", choices=["quadratic", "binomial"],
                    default="quadratic",
                    help="quadratic = Poisson/NB-like mean-variance fit. binomial needs "
@@ -87,7 +86,7 @@ def read_counts(h5ad_path, cell_ids, gene_ids):
                  f"e.g. {sorted(missing)[:3]}")
     missing = set(gene_ids) - set(a.var_names)
     if missing:
-        sys.exit(f"error: {len(missing)} selected gene ids absent from the h5ad, "
+        sys.exit(f"error: {len(missing)} kept gene ids absent from the h5ad, "
                  f"e.g. {sorted(missing)[:3]}")
     ci = a.obs_names.get_indexer(cell_ids)
     gi = a.var_names.get_indexer(gene_ids)
@@ -95,9 +94,9 @@ def read_counts(h5ad_path, cell_ids, gene_ids):
     return X.astype(np.float32)
 
 
-def read_tenx_genes(path):
-    with h5py.File(path, "r") as h5:
-        return [g.decode() for g in h5["matrix/genes"][:]]
+def read_ids(path):
+    with gzip.open(path, "rt") as f:
+        return [ln.strip() for ln in f if ln.strip()]
 
 
 def write_tsv(path, matrix, row_ids, row_label):
@@ -114,9 +113,8 @@ def main():
     out = Path(args.output_dir)
     out.mkdir(parents=True, exist_ok=True)
 
-    with gzip.open(args.filtered_cellids, "rt") as f:
-        cell_ids = [ln.strip() for ln in f if ln.strip()]
-    gene_ids = read_tenx_genes(args.normalized_selected_h5)
+    cell_ids = read_ids(args.filtered_cellids)
+    gene_ids = read_ids(args.filtered_featureids)
     X = read_counts(args.rawdata_h5ad, cell_ids, gene_ids)
     print(f"  counts (cells x genes): {X.shape}")
 

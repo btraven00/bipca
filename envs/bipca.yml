@@ -24,8 +24,6 @@ dependencies:
   # bipca imports torch at module load and only switches to the scipy backend
   # once it sees a sparse matrix.
   - pytorch-cpu>=1.12
-  # module I/O: the stage hands us an h5ad plus a TENx-format HDF5
-  - h5py
   - pip
   - pip:
       - bipca==1.1.0
