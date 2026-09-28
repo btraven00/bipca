@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""End-to-end smoke test: synthesise the three CNTFCT inputs (raw-count h5ad,
+"""End-to-end smoke test: synthesise the three RDIMR inputs (raw-count h5ad,
 gzipped cell ids, TENx h5 of selected genes), run pca.py, check the output
 contract. Run from the module root: python tests/smoke.py
 """
@@ -53,7 +53,7 @@ with tempfile.TemporaryDirectory() as tmp:
                         "--random_seed", "42", "--min_gene_cells", "5"])
     assert r.returncode == 0, "pca.py failed"
 
-    pcas = pd.read_csv(tmp / "t_pcas.tsv", sep="\t", index_col=0)
+    pcas = pd.read_csv(tmp / "t_embedding.tsv", sep="\t", index_col=0)
     load = pd.read_csv(tmp / "t_loadings.tsv", sep="\t", index_col=0)
     diag = json.loads((tmp / "t_bipca.json").read_text())
 

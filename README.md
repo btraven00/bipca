@@ -1,10 +1,10 @@
 # omni-bipca
 
-BiPCA (biwhitened PCA, KlugerLab) as an omnibenchmark **CNTFCT** module.
+BiPCA (biwhitened PCA, KlugerLab) as an omnibenchmark **RDIMR** (raw dimensionality reduction) module.
 
 Sinkhorn biwhitening under a fitted quadratic mean-variance model, SVD, then
 truncation at the Marchenko-Pastur bulk edge. The variance model is defined on
-raw counts, which is why this sits on CNTFCT (`rawdata_h5ad`) and not on PCA
+raw counts, which is why this sits on RDIMR (`rawdata_h5ad`) and not on PCA
 (`normalized_selected_h5` only). Cells come from `filtered_cellids`, genes from
 the rownames of `normalized_selected_h5` — the same submatrix glmpca, newwave
 and scGBM get.
@@ -13,7 +13,7 @@ and scGBM get.
       --rawdata_h5ad be1.h5ad --filtered_cellids be1_cellids.txt.gz \
       --normalized_selected_h5 be1_normalized_selected.h5 --random_seed 42
 
-Emits `{name}_pcas.tsv`, `{name}_loadings.tsv` and `{name}_bipca.json`
+Emits `{name}_embedding.tsv`, `{name}_loadings.tsv` and `{name}_bipca.json`
 (diagnostics; not a declared stage output).
 
 ## k is derived

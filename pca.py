@@ -1,10 +1,10 @@
 #!/usr/bin/env python3
-"""CNTFCT module: BiPCA (biwhitened PCA, Stanley et al. / KlugerLab).
+"""RDIMR module: BiPCA (biwhitened PCA, Stanley et al. / KlugerLab).
 
 BiPCA fits a quadratic mean-variance relationship (Poisson/NB-like), Sinkhorn-
 biwhitens the matrix so the noise sits on the canonical Marchenko-Pastur scale,
 SVDs it, and truncates at the MP bulk edge. The variance model is defined on
-*raw counts*, so this lands on CNTFCT -- the only stage that gets
+*raw counts*, so this lands on RDIMR -- the only stage that gets
 `rawdata_h5ad` -- and not on PCA, whose single input is already normalized.
 
 Cells come from --filtered_cellids, genes from the rownames of
@@ -13,9 +13,9 @@ and glmpca/newwave/scGBM see the same submatrix of counts.
 
 Outputs
 -------
-{output_dir}/{name}_pcas.tsv       cell_id  PC1..PCk   (U * shrunk S)
-{output_dir}/{name}_loadings.tsv   gene_id  PC1..PCk   (V, unit norm)
-{output_dir}/{name}_bipca.json     mp_rank, q, KS, shapes  (diagnostics, not a stage output)
+{output_dir}/{name}_embedding.tsv    cell_id  PC1..PCk   (U * shrunk S)
+{output_dir}/{name}_loadings.tsv     gene_id  PC1..PCk   (V, unit norm)
+{output_dir}/{name}_bipca.json       mp_rank, q, KS, shapes  (diagnostics, not a stage output)
 
 k is derived, not requested
 ---------------------------
@@ -45,7 +45,7 @@ from common import cli  # noqa: E402
 def parse_args():
     p = argparse.ArgumentParser(description="BiPCA biwhitened PCA module")
     cli.add_base_args(p)             # --output_dir, --name
-    cli.add_stage_args(p, "CNTFCT")  # --rawdata_h5ad, --filtered_cellids, --normalized_selected_h5
+    cli.add_stage_args(p, "RDIMR")   # --rawdata_h5ad, --filtered_cellids, --normalized_selected_h5
     p.add_argument("--variance_estimator", choices=["quadratic", "binomial"],
                    default="quadratic",
                    help="quadratic = Poisson/NB-like mean-variance fit. binomial needs "
@@ -167,10 +167,10 @@ def main():
         sys.exit(f"error: shape mismatch -- scores {scores.shape} / loadings "
                  f"{loadings.shape} vs {len(cell_ids)} cells x {len(gene_ids)} genes, k={k}")
 
-    write_tsv(out / f"{args.name}_pcas.tsv", scores, cell_ids, "cell_id")
+    write_tsv(out / f"{args.name}_embedding.tsv", scores, cell_ids, "cell_id")
     write_tsv(out / f"{args.name}_loadings.tsv", loadings, gene_ids, "gene_id")
     (out / f"{args.name}_bipca.json").write_text(json.dumps(diag, indent=2))
-    print(f"  wrote: {out}/{args.name}_{{pcas,loadings}}.tsv + _bipca.json")
+    print(f"  wrote: {out}/{args.name}_{{embedding,loadings}}.tsv + _bipca.json")
 
 
 if __name__ == "__main__":
