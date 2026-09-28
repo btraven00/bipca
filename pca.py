@@ -45,10 +45,6 @@ def parse_args():
     p = argparse.ArgumentParser(description="BiPCA biwhitened PCA module")
     cli.add_base_args(p)             # --output_dir, --name
     cli.add_stage_args(p, "RDIMR")   # --rawdata_h5ad, --filtered_cellids, --filtered_featureids
-    p.add_argument("--variance_estimator", choices=["quadratic", "binomial"],
-                   default="quadratic",
-                   help="quadratic = Poisson/NB-like mean-variance fit. binomial needs "
-                        "read counts BiPCA cannot get from this stage, so it will fail")
     p.add_argument("--random_seed", type=int, required=True, help="random seed")
     p.add_argument("--n_iter", type=int, default=2000, help="Sinkhorn iteration cap")
     p.add_argument("--sinkhorn_tol", type=float, default=1e-5, help="Sinkhorn tolerance")
@@ -91,6 +87,10 @@ def read_counts(h5ad_path, cell_ids, gene_ids):
     ci = a.obs_names.get_indexer(cell_ids)
     gi = a.var_names.get_indexer(gene_ids)
     X = sp.csr_matrix(X)[ci][:, gi]
+    d = X.data
+    if d.size and not np.array_equal(d, np.rint(d)):
+        sys.exit(f"error: {h5ad_path} counts hold non-integer values (min {d.min():.4g}, "
+                 f"max {d.max():.4g}): BiPCA's variance model needs raw counts")
     return X.astype(np.float32)
 
 
@@ -134,7 +134,9 @@ def main():
 
     from bipca import BiPCA  # imported late: it pulls in torch
 
-    bp = BiPCA(variance_estimator=args.variance_estimator, seed=args.random_seed,
+    # ponytail: quadratic only. "binomial" needs per-entry trial counts
+    # (read_counts), which UMI data does not have; BiPCA() raises without them.
+    bp = BiPCA(variance_estimator="quadratic", seed=args.random_seed,
                n_iter=args.n_iter, sinkhorn_tol=args.sinkhorn_tol,
                n_components=args.k_max, verbose=1)
     bp.fit(X)
@@ -150,7 +152,6 @@ def main():
     diag = {"mp_rank": k, "q": float(bp.q), "sigma": float(np.ravel(bp.sigma)[0]),
             "ks": None if getattr(bp, "kst", None) is None else float(np.ravel(bp.kst)[0]),
             "n_cells": len(cell_ids), "n_genes": len(gene_ids),
-            "variance_estimator": args.variance_estimator,
             "min_gene_cells": args.min_gene_cells, "random_seed": args.random_seed}
     print(f"  mp_rank={k} q={diag['q']:.4g} sigma={diag['sigma']:.4g} KS={diag['ks']} "
           f"scores={scores.shape} loadings={loadings.shape}")

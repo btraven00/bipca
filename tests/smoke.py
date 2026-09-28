@@ -58,5 +58,17 @@ with tempfile.TemporaryDirectory() as tmp:
     assert list(pcas.columns) == list(load.columns) == [f"PC{i+1}" for i in range(diag["mp_rank"])]
     assert np.isfinite(pcas.values).all() and np.isfinite(load.values).all()
     assert diag["mp_rank"] >= 1, "MP truncation found no signal in a rank-4 matrix"
+
+    # the guard: non-integer "counts" must be refused, not fitted
+    b = ad.AnnData(shape=(N_CELLS, N_GENES))
+    b.obs_names, b.var_names = cells, genes
+    b.layers["counts"] = sp.csr_matrix(np.log1p(counts))
+    b.write_h5ad(tmp / "bad.h5ad")
+    r = subprocess.run([sys.executable, "pca.py", "--output_dir", str(tmp),
+                        "--name", "bad", "--rawdata_h5ad", str(tmp / "bad.h5ad"),
+                        "--filtered_cellids", str(tmp / "cellids.txt.gz"),
+                        "--filtered_featureids", str(tmp / "featureids.txt.gz"),
+                        "--random_seed", "42"], capture_output=True, text=True)
+    assert r.returncode != 0 and "raw counts" in r.stderr, r.stderr
     print(f"OK: {pcas.shape[0]} cells x {diag['mp_rank']} PCs, "
           f"{load.shape[0]} genes, q={diag['q']:.3f}")

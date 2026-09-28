@@ -24,7 +24,7 @@ and the run aborts if `mp_rank` reaches it. A natural-k module and a fixed-k
 module are not producing the same object; compare accordingly, and note the
 metrics still do not report the k found.
 
-## Measured on be1 (old CNTFCT wiring, FEAT's 2000 genes)
+## Measured on be1 (FEAT's 2000 genes)
 
 Not rerun on RDIMR's full gene set yet. 1715 cells x 2000 selected genes, `--random_seed 42`, defaults otherwise:
 Sinkhorn **converged** after 50 iterations, sigma 0.898, `mp_rank=25`, 213s
@@ -41,9 +41,13 @@ on counts vs. none) and different input (counts vs. log-normalized).
 - BiPCA's Sinkhorn emits **NaN, not an exception**, on near-empty columns. The
   `--min_gene_cells` guard (default 10) drops them up front; the run aborts on
   any non-finite output and names the flag. 50 was needed at n=14000 cells.
-- `--variance_estimator binomial` needs per-cell read counts BiPCA cannot get
-  from this stage's inputs; it will fail. Left exposed rather than hidden.
+- Only BiPCA's `quadratic` variance estimator is used. `binomial` models each
+  entry as Binomial(n, p) with a known per-entry trial count (`read_counts`,
+  e.g. methylation coverage); UMI counts have none, and `BiPCA()` raises.
+- Non-integer counts are refused: the variance model is only defined on counts.
 - Torch is a hard dependency of the PyPI package, so the env carries it even
   though everything here runs on CPU.
 
-`python tests/smoke.py` runs the whole path on a synthetic NB count matrix.
+`pixi run test` runs the whole path on a synthetic NB count matrix.
+`pixi run export-env` regenerates `envs/bipca.yml`, which the plan copies
+verbatim.
