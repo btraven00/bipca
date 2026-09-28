@@ -1,4 +1,4 @@
-# omni-bipca
+# bipca (omnibenchmark module)
 
 BiPCA (biwhitened PCA, KlugerLab) as an omnibenchmark **RDIMR** (raw dimensionality reduction) module.
 

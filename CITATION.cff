@@ -1,7 +1,7 @@
 cff-version: 1.2.0
 message: "If you use this module in your publication, please cite as below, and cite BiPCA itself (see references)."
 type: software
-title: "omni-bipca"
+title: "bipca (omnibenchmark module)"
 abstract: |
   BiPCA (biwhitened PCA) wrapped as an Omnibenchmark RDIMR module for split-stages-plan.
 authors:
@@ -10,8 +10,8 @@ authors:
     email: "ben.uzh@proton.me"
 version: "0.1.0"
 license: MIT
-url: "https://github.com/omni-scrna/omni-bipca"
-repository-code: "https://github.com/omni-scrna/omni-bipca"
+url: "https://github.com/omni-scrna/bipca"
+repository-code: "https://github.com/omni-scrna/bipca"
 keywords:
   - bioinformatics
   - computational-biology
