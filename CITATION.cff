@@ -1,0 +1,50 @@
+cff-version: 1.2.0
+message: "If you use this module in your publication, please cite as below, and cite BiPCA itself (see references)."
+type: software
+title: "omni-bipca"
+abstract: |
+  BiPCA (biwhitened PCA) wrapped as an Omnibenchmark RDIMR module for split-stages-plan.
+authors:
+  - family-names: "carrillo"
+    given-names: "ben"
+    email: "ben.uzh@proton.me"
+version: "0.1.0"
+license: MIT
+url: "https://github.com/omni-scrna/omni-bipca"
+repository-code: "https://github.com/omni-scrna/omni-bipca"
+keywords:
+  - bioinformatics
+  - computational-biology
+  - benchmark
+  - omnibenchmark
+  - module
+references:
+  - type: article
+    title: "Principled PCA separates signal from noise in omics count data"
+    authors:
+      - family-names: "Stanley"
+        given-names: "Jay S."
+      - family-names: "Yang"
+        given-names: "Junchen"
+      - family-names: "Li"
+        given-names: "Ruiqi"
+      - family-names: "Lindenbaum"
+        given-names: "Ofir"
+      - family-names: "Kobak"
+        given-names: "Dmitry"
+      - family-names: "Landa"
+        given-names: "Boris"
+      - family-names: "Kluger"
+        given-names: "Yuval"
+    journal: "bioRxiv"
+    year: 2025
+    doi: "10.1101/2025.02.03.636129"
+  - type: software
+    title: "bipca"
+    version: "1.1.0"
+    license: BSD-3-Clause
+    url: "https://github.com/KlugerLab/bipca"
+    authors:
+      - family-names: "Stanley"
+        given-names: "Jay S."
+      - name: "Kluger Lab"
