@@ -14,6 +14,6 @@ templates:
 # into src/common/schema/.
 benchmarks:
   - name: split-stages
-    repo: https://github.com/omni-scrna/split-stages-plan
+    repo: https://github.com/btraven00/omni-scrna-plan  # embed-gen: RDIMR schema, not on upstream main yet
     plan: benchmark_conda.yaml
-    ref: main
+    ref: embed-gen
