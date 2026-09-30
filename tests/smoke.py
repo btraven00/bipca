@@ -70,5 +70,31 @@ with tempfile.TemporaryDirectory() as tmp:
                         "--filtered_featureids", str(tmp / "featureids.txt.gz"),
                         "--random_seed", "42"], capture_output=True, text=True)
     assert r.returncode != 0 and "raw counts" in r.stderr, r.stderr
+    # ablations (lattice W5/W6): N past mp_rank, three column scalings
+    def run(name, *extra):
+        r = subprocess.run([sys.executable, "pca.py", "--output_dir", str(tmp), "--name", name,
+                            "--rawdata_h5ad", str(tmp / "t.h5ad"),
+                            "--filtered_cellids", str(tmp / "cellids.txt.gz"),
+                            "--filtered_featureids", str(tmp / "featureids.txt.gz"),
+                            "--random_seed", "42", "--min_gene_cells", "5", *extra],
+                           capture_output=True, text=True)
+        return r, (pd.read_csv(tmp / f"{name}_embedding.tsv", sep="\t", index_col=0).to_numpy()
+                   if r.returncode == 0 else None)
+    k, n = diag["mp_rank"], diag["mp_rank"] + 3
+    for scaling in ("shrunk", "raw", "none"):
+        r, E = run(scaling, "--ablate_n_components", str(n), "--component_scaling", scaling)
+        assert r.returncode == 0, r.stderr
+        d = json.loads((tmp / f"{scaling}_bipca.json").read_text())
+        assert E.shape == (diag["n_cells"], n) and d["mp_rank"] == k and d["n_components_used"] == n
+        norms = np.linalg.norm(E, axis=0)
+        if scaling == "shrunk":   # the shrinker zeroes everything past the MP edge
+            assert (norms[k:] == 0).all() and (norms[:k] > 0).all(), norms
+        elif scaling == "raw":    # unshrunk S: descending, nothing zeroed
+            assert (norms > 0).all() and (np.diff(norms) <= 1e-6 * norms[0]).all(), norms
+        else:
+            assert np.allclose(norms, 1.0), norms
+    r, _ = run("toobig", "--ablate_n_components", "201")   # --k_max defaults to 200
+    assert r.returncode != 0 and "do not clamp" in r.stderr, r.stderr
+
     print(f"OK: {pcas.shape[0]} cells x {diag['mp_rank']} PCs, "
           f"{load.shape[0]} genes, q={diag['q']:.3f}")

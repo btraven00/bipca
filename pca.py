@@ -58,6 +58,15 @@ def parse_args():
     p.add_argument("--k_max", type=int, default=200,
                    help="singular vectors to compute. NOT a target: k is still mp_rank. "
                         "The run fails if mp_rank saturates this")
+    # Ablations (lattice W5/W6). Defaults reproduce the method as published.
+    p.add_argument("--ablate_n_components", type=int, default=None,
+                   help="ABLATION: emit N components instead of mp_rank (<= --k_max). "
+                        "mp_rank is still computed, checked against --k_max and reported")
+    p.add_argument("--component_scaling", choices=["shrunk", "none", "raw"], default="shrunk",
+                   help="score columns: shrunk = U * shrunk S (BiPCA's transform, default); "
+                        "none = U; raw = U * unshrunk S. NB the shrinker zeroes every "
+                        "singular value past the MP edge, so shrunk components beyond "
+                        "mp_rank are all-zero columns")
     return p.parse_args()
 
 
@@ -113,6 +122,9 @@ def main():
     out = Path(args.output_dir)
     out.mkdir(parents=True, exist_ok=True)
 
+    if args.ablate_n_components is not None and not 1 <= args.ablate_n_components <= args.k_max:
+        sys.exit(f"error: --ablate_n_components {args.ablate_n_components} outside "
+                 f"[1, --k_max {args.k_max}]: raise --k_max, do not clamp")
     cell_ids = read_ids(args.filtered_cellids)
     gene_ids = read_ids(args.filtered_featureids)
     X = read_counts(args.rawdata_h5ad, cell_ids, gene_ids)
@@ -146,13 +158,20 @@ def main():
         sys.exit(f"error: mp_rank={k} saturated --k_max {args.k_max}.\n"
                  f"       The reported rank would be the ceiling, not the MP edge. "
                  f"Raise --k_max.")
-    scores = _np(bp.transform(counts=False, which="left"))   # U[:, :k] * shrunk S
-    loadings = _np(bp.V_Y)[:, :k]
+    n = k if args.ablate_n_components is None else args.ablate_n_components
+    if n == k and args.component_scaling == "shrunk":
+        scores = _np(bp.transform(counts=False, which="left"))   # U[:, :k] * shrunk S
+    else:
+        S = {"shrunk": bp.shrinker.transform(bp.S_Y), "raw": bp.S_Y}.get(args.component_scaling)
+        U = bp.U_Y[:, :n]
+        scores = _np(U if S is None else U * S[:n])
+    loadings = _np(bp.V_Y)[:, :n]
     # kst is only bound on some fit paths; q/sigma always are.
     diag = {"mp_rank": k, "q": float(bp.q), "sigma": float(np.ravel(bp.sigma)[0]),
             "ks": None if getattr(bp, "kst", None) is None else float(np.ravel(bp.kst)[0]),
             "n_cells": len(cell_ids), "n_genes": len(gene_ids),
-            "min_gene_cells": args.min_gene_cells, "random_seed": args.random_seed}
+            "min_gene_cells": args.min_gene_cells, "random_seed": args.random_seed,
+            "n_components_used": n, "component_scaling": args.component_scaling}
     print(f"  mp_rank={k} q={diag['q']:.4g} sigma={diag['sigma']:.4g} KS={diag['ks']} "
           f"scores={scores.shape} loadings={loadings.shape}")
 
@@ -162,9 +181,9 @@ def main():
         if not np.isfinite(M).all():
             sys.exit(f"error: {what} contain non-finite values -- Sinkhorn diverged on "
                      f"sparse columns. Raise --min_gene_cells above {args.min_gene_cells}.")
-    if scores.shape != (len(cell_ids), k) or loadings.shape != (len(gene_ids), k):
+    if scores.shape != (len(cell_ids), n) or loadings.shape != (len(gene_ids), n):
         sys.exit(f"error: shape mismatch -- scores {scores.shape} / loadings "
-                 f"{loadings.shape} vs {len(cell_ids)} cells x {len(gene_ids)} genes, k={k}")
+                 f"{loadings.shape} vs {len(cell_ids)} cells x {len(gene_ids)} genes, n={n}")
 
     write_tsv(out / f"{args.name}_embedding.tsv", scores, cell_ids, "cell_id")
     write_tsv(out / f"{args.name}_loadings.tsv", loadings, gene_ids, "gene_id")
